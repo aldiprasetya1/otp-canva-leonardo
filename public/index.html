@@ -48,21 +48,27 @@
     header {
       background: linear-gradient(180deg, #131522 0%, var(--bg) 100%);
       border-bottom: 1px solid var(--border);
-      padding: 32px 20px 24px;
+      padding: 28px 20px 22px;
     }
 
     .header-inner {
       max-width: 640px;
       margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
     }
 
     .brand-row {
       display: flex;
       align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .brand-left {
+      display: flex;
+      align-items: center;
       gap: 12px;
+      flex: 1;
+      min-width: 0;
     }
 
     .brand-icon {
@@ -90,12 +96,49 @@
       background: linear-gradient(135deg, #ffffff 30%, #c4b5fd 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      line-height: 1.2;
     }
 
-
     .header-desc {
-      font-size: 14px;
+      font-size: 13px;
       color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    /* Language Switcher Pill */
+    .lang-switch {
+      display: inline-flex;
+      align-items: center;
+      background: var(--card-subtle);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .lang-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 4px 10px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .lang-btn:hover {
+      color: var(--text-main);
+    }
+
+    .lang-btn.active {
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 2px 8px var(--accent-glow);
     }
 
     /* Main Container */
@@ -511,12 +554,8 @@
       margin-top: auto;
     }
 
-    footer a {
-      color: var(--text-muted);
-      text-decoration: none;
-    }
-
     @media (max-width: 520px) {
+      .brand-row { flex-wrap: wrap; }
       .input-row { flex-direction: column; }
       .btn-action { width: 100%; justify-content: center; }
       .otp-card { flex-direction: column; align-items: flex-start; }
@@ -528,17 +567,20 @@
   <header>
     <div class="header-inner">
       <div class="brand-row">
-        <div class="brand-icon">
-          <!-- Leonardo Sparkle Logo Icon -->
-          <svg viewBox="0 0 24 24">
-            <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" />
-          </svg>
-        </div>
-        <div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <h1>OTP LEONARDO</h1>
+        <div class="brand-left">
+          <div class="brand-icon">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" />
+            </svg>
           </div>
-          <p class="header-desc">Ambil dan pantau kode verifikasi Leonardo AI &amp; Canva secara langsung</p>
+          <div>
+            <h1>OTP LEONARDO</h1>
+            <p id="headerDesc" class="header-desc">Ambil dan pantau kode verifikasi Leonardo AI &amp; Canva secara langsung</p>
+          </div>
+        </div>
+        <div class="lang-switch" role="group" aria-label="Language">
+          <button type="button" class="lang-btn active" id="btnLangId" data-lang="id">ID</button>
+          <button type="button" class="lang-btn" id="btnLangEn" data-lang="en">EN</button>
         </div>
       </div>
     </div>
@@ -546,7 +588,7 @@
 
   <main>
     <div class="card">
-      <label class="field-label" for="emailInput">Alamat Email Penerima</label>
+      <label id="emailLabel" class="field-label" for="emailInput">Alamat Email Penerima</label>
       <div class="input-row">
         <div class="input-wrap">
           <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -564,17 +606,17 @@
         <label class="switch-label">
           <input type="checkbox" id="autoRefreshCheck" class="switch-input" />
           <span class="switch-slider"></span>
-          <span>Auto-refresh (<b id="timerCount">15</b>s)</span>
+          <span><span id="autoRefreshText">Auto-refresh</span> (<b id="timerCount">15</b>s)</span>
         </label>
         <label class="switch-label">
           <input type="checkbox" id="soundCheck" class="switch-input" checked />
           <span class="switch-slider"></span>
-          <span>Suara Notifikasi</span>
+          <span id="soundText">Suara Notifikasi</span>
         </label>
       </div>
 
       <div id="recentContainer" class="recent-box" style="display: none;">
-        <span class="recent-title">Riwayat:</span>
+        <span id="recentTitle" class="recent-title">Riwayat:</span>
         <div id="recentList" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
       </div>
     </div>
@@ -594,20 +636,86 @@
           <rect x="2" y="4" width="20" height="16" rx="2" />
           <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
         </svg>
-        <p>Belum ada OTP masuk untuk email ini.</p>
-        <small>Silakan minta kode verifikasi di Leonardo AI / Canva, lalu klik Ambil OTP lagi.</small>
+        <p id="emptyTitle">Belum ada OTP masuk untuk email ini.</p>
+        <small id="emptySub">Silakan minta kode verifikasi di Leonardo AI / Canva, lalu klik Ambil OTP lagi.</small>
       </div>
     </div>
   </main>
 
   <footer>
-    OTP LEONARDO &bull; Rahmat Premium &bull; Otomatis diperbarui dari server backend
+    <span id="footerText">OTP LEONARDO &bull; Rahmat Premium &bull; Otomatis diperbarui dari server backend</span>
   </footer>
 
   <div id="toast" class="toast">Kode OTP Disalin!</div>
 
   <script>
+    // i18n Translations Dictionary
+    const I18N = {
+      id: {
+        pageTitle: "OTP LEONARDO - Kode Verifikasi Instan",
+        headerDesc: "Ambil dan pantau kode verifikasi Leonardo AI & Canva secara langsung",
+        emailLabel: "Alamat Email Penerima",
+        emailPlaceholder: "Masukkan email contoh@domain.com",
+        btnFetch: "Ambil OTP",
+        btnLoading: "Memuat...",
+        autoRefresh: "Auto-refresh",
+        soundText: "Suara Notifikasi",
+        recentTitle: "Riwayat:",
+        emptyTitle: "Belum ada OTP masuk untuk email ini.",
+        emptySub: "Silakan minta kode verifikasi di Leonardo AI / Canva, lalu klik Ambil OTP lagi.",
+        footerText: "OTP LEONARDO • Rahmat Premium • Otomatis diperbarui dari server backend",
+        errInvalidEmail: "Silakan masukkan alamat email yang valid.",
+        errBackend: "Gagal terhubung ke backend.",
+        errServer: "Terjadi kesalahan pada server",
+        codesFound: "kode ditemukan",
+        copyBtn: "Salin",
+        copiedBtn: "Tersalin!",
+        toastCopied: "Kode OTP {otp} disalin!",
+        timeJustNow: "Baru saja",
+        timeSec: "detik lalu",
+        timeMin: "menit lalu",
+        timeHour: "jam lalu",
+        noSubject: "Tanpa Subjek"
+      },
+      en: {
+        pageTitle: "OTP LEONARDO - Instant Verification Code",
+        headerDesc: "Instantly retrieve and monitor Leonardo AI & Canva verification codes",
+        emailLabel: "Recipient Email Address",
+        emailPlaceholder: "Enter email e.g. user@domain.com",
+        btnFetch: "Get OTP",
+        btnLoading: "Fetching...",
+        autoRefresh: "Auto-refresh",
+        soundText: "Sound Alert",
+        recentTitle: "Recent:",
+        emptyTitle: "No OTP received for this email yet.",
+        emptySub: "Please request a verification code from Leonardo AI / Canva, then click Get OTP again.",
+        footerText: "OTP LEONARDO • Rahmat Premium • Automatically updated from backend server",
+        errInvalidEmail: "Please enter a valid email address.",
+        errBackend: "Failed to connect to backend server.",
+        errServer: "Server error occurred",
+        codesFound: "codes found",
+        copyBtn: "Copy",
+        copiedBtn: "Copied!",
+        toastCopied: "OTP code {otp} copied!",
+        timeJustNow: "Just now",
+        timeSec: "seconds ago",
+        timeMin: "minutes ago",
+        timeHour: "hours ago",
+        noSubject: "No Subject"
+      }
+    };
+
+    let currentLang = localStorage.getItem('otp_lang') || 'id';
+
     const emailInput = document.getElementById('emailInput');
+    const emailLabel = document.getElementById('emailLabel');
+    const headerDesc = document.getElementById('headerDesc');
+    const autoRefreshText = document.getElementById('autoRefreshText');
+    const soundText = document.getElementById('soundText');
+    const recentTitle = document.getElementById('recentTitle');
+    const emptyTitle = document.getElementById('emptyTitle');
+    const emptySub = document.getElementById('emptySub');
+    const footerText = document.getElementById('footerText');
     const btnFetch = document.getElementById('btnFetch');
     const btnText = document.getElementById('btnText');
     const btnSpinner = document.getElementById('btnSpinner');
@@ -623,10 +731,49 @@
     const toast = document.getElementById('toast');
     const recentContainer = document.getElementById('recentContainer');
     const recentList = document.getElementById('recentList');
+    const btnLangId = document.getElementById('btnLangId');
+    const btnLangEn = document.getElementById('btnLangEn');
 
     let countdownInterval = null;
     let countdownVal = 15;
     let lastFoundOtp = null;
+    let lastFetchedOtps = [];
+    let lastFetchedEmail = '';
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem('otp_lang', lang);
+
+      // Toggle active buttons
+      btnLangId.classList.toggle('active', lang === 'id');
+      btnLangEn.classList.toggle('active', lang === 'en');
+
+      // Update text in UI
+      const t = I18N[lang];
+      document.title = t.pageTitle;
+      document.documentElement.lang = lang;
+      headerDesc.textContent = t.headerDesc;
+      emailLabel.textContent = t.emailLabel;
+      emailInput.placeholder = t.emailPlaceholder;
+      autoRefreshText.textContent = t.autoRefresh;
+      soundText.textContent = t.soundText;
+      recentTitle.textContent = t.recentTitle;
+      emptyTitle.textContent = t.emptyTitle;
+      emptySub.textContent = t.emptySub;
+      footerText.innerHTML = t.footerText;
+
+      if (!btnFetch.disabled) {
+        btnText.textContent = t.btnFetch;
+      }
+
+      // Re-render OTP list if results exist
+      if (lastFetchedEmail && lastFetchedOtps) {
+        renderResults(lastFetchedEmail, lastFetchedOtps, false);
+      }
+    }
+
+    btnLangId.addEventListener('click', () => setLanguage('id'));
+    btnLangEn.addEventListener('click', () => setLanguage('en'));
 
     // Load recent emails from localStorage
     function loadRecent() {
@@ -683,11 +830,12 @@
 
     function timeAgo(ts) {
       if (!ts) return '';
+      const t = I18N[currentLang];
       const diff = Math.floor((Date.now() - ts) / 1000);
-      if (diff < 10) return 'Baru saja';
-      if (diff < 60) return diff + ' detik lalu';
-      if (diff < 3600) return Math.floor(diff / 60) + ' menit lalu';
-      return Math.floor(diff / 3600) + ' jam lalu';
+      if (diff < 10) return t.timeJustNow;
+      if (diff < 60) return `${diff} ${t.timeSec}`;
+      if (diff < 3600) return `${Math.floor(diff / 60)} ${t.timeMin}`;
+      return `${Math.floor(diff / 3600)} ${t.timeHour}`;
     }
 
     function detectService(subject) {
@@ -698,16 +846,17 @@
     }
 
     async function fetchOtp() {
+      const t = I18N[currentLang];
       const email = emailInput.value.trim();
       if (!email || !email.includes('@')) {
-        errorBanner.textContent = 'Silakan masukkan alamat email yang valid.';
+        errorBanner.textContent = t.errInvalidEmail;
         errorBanner.style.display = 'block';
         return;
       }
 
       errorBanner.style.display = 'none';
       btnFetch.disabled = true;
-      btnText.style.display = 'none';
+      btnText.textContent = t.btnLoading;
       btnSpinner.style.display = 'inline-block';
 
       try {
@@ -720,25 +869,28 @@
         const data = await res.json();
 
         if (!data.ok) {
-          throw new Error(data.error || 'Terjadi kesalahan pada server');
+          throw new Error(data.error || t.errServer);
         }
 
         saveRecent(email);
-        renderResults(email, data.otps || []);
+        lastFetchedEmail = email;
+        lastFetchedOtps = data.otps || [];
+        renderResults(email, lastFetchedOtps, true);
       } catch (err) {
-        errorBanner.textContent = err.message || 'Gagal terhubung ke backend.';
+        errorBanner.textContent = err.message || t.errBackend;
         errorBanner.style.display = 'block';
       } finally {
         btnFetch.disabled = false;
-        btnText.style.display = 'inline';
+        btnText.textContent = t.btnFetch;
         btnSpinner.style.display = 'none';
       }
     }
 
-    function renderResults(email, otps) {
+    function renderResults(email, otps, shouldAlert = true) {
+      const t = I18N[currentLang];
       resultContainer.style.display = 'flex';
       displayEmail.textContent = email;
-      displayCount.textContent = otps.length ? `${otps.length} kode ditemukan` : '';
+      displayCount.textContent = otps.length ? `${otps.length} ${t.codesFound}` : '';
       otpList.innerHTML = '';
 
       if (!otps || otps.length === 0) {
@@ -750,7 +902,7 @@
 
       // Check for new OTP to trigger sound
       const topOtp = otps[0]?.otp;
-      if (topOtp && topOtp !== lastFoundOtp) {
+      if (shouldAlert && topOtp && topOtp !== lastFoundOtp) {
         playBeep();
         lastFoundOtp = topOtp;
       }
@@ -765,23 +917,23 @@
         card.innerHTML = `
           <div class="otp-info">
             <div><span class="badge-tag ${s.cls}">${s.label}</span></div>
-            <div class="otp-subject" title="${item.subject || ''}">${item.subject || 'Tanpa Subjek'}</div>
+            <div class="otp-subject" title="${item.subject || ''}">${item.subject || t.noSubject}</div>
             <div class="otp-time">${timeAgo(item.ts)}</div>
           </div>
           <div class="otp-right">
             <span class="otp-number">${item.otp}</span>
-            <button class="btn-copy">Salin</button>
+            <button class="btn-copy">${t.copyBtn}</button>
           </div>
         `;
 
         const copyBtn = card.querySelector('.btn-copy');
         copyBtn.addEventListener('click', () => {
           navigator.clipboard.writeText(item.otp).then(() => {
-            copyBtn.textContent = 'Tersalin!';
+            copyBtn.textContent = t.copiedBtn;
             copyBtn.classList.add('copied');
-            showToast(`Kode OTP ${item.otp} tersalin!`);
+            showToast(t.toastCopied.replace('{otp}', item.otp));
             setTimeout(() => {
-              copyBtn.textContent = 'Salin';
+              copyBtn.textContent = t.copyBtn;
               copyBtn.classList.remove('copied');
             }, 1800);
           });
@@ -820,7 +972,8 @@
       if (e.key === 'Enter') fetchOtp();
     });
 
-    // Init
+    // Init language & recent
+    setLanguage(currentLang);
     loadRecent();
   </script>
 </body>
