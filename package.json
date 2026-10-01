@@ -1,0 +1,12 @@
+{
+  "name": "otp-leonardo-mirror",
+  "version": "1.0.0",
+  "description": "Mirror Web OTP Leonardo AI & Canva",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "Rahmat Premium",
+  "license": "ISC"
+}
