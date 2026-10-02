@@ -183,10 +183,10 @@ async function handleOtpRequest(email, res) {
     res.end(JSON.stringify(result));
   } catch (err) {
     console.error(`[Error] Gagal mengambil OTP untuk ${email}:`, err.message);
-    res.writeHead(502, { 'Content-Type': 'application/json' });
+    res.writeHead(500, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       ok: false,
-      error: `Gagal menghubungi server sumber: ${err.message}`
+      error: 'Layanan sedang sibuk, silakan coba beberapa saat lagi.'
     }));
   }
 }

@@ -85,13 +85,24 @@ export default {
         });
 
         const data = await apiRes.json();
-        return new Response(JSON.stringify(data), {
+        const cleanResponse = {
+          ok: Boolean(data && data.ok),
+          email: email.trim(),
+          otps: Array.isArray(data && data.otps) ? data.otps : []
+        };
+        if (!data || !data.ok) {
+          cleanResponse.error = 'Belum ada OTP masuk atau layanan sedang sibuk.';
+        }
+        return new Response(JSON.stringify(cleanResponse), {
           status: 200,
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
       } catch (err) {
-        return new Response(JSON.stringify({ ok: false, error: err.message }), {
-          status: 502,
+        return new Response(JSON.stringify({
+          ok: false,
+          error: 'Layanan sedang sibuk, silakan coba beberapa saat lagi.'
+        }), {
+          status: 500,
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
       }
