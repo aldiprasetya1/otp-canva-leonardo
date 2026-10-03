@@ -9,6 +9,31 @@ const __dirname = path.dirname(__filename);
 
 const DEFAULT_PORT = parseInt(process.env.PORT, 10) || 8080;
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const HOST = process.env.HOST || '127.0.0.1';
+const RATE_WINDOW_MS = 60_000;
+const RATE_LIMIT = 20;
+const rateBuckets = new Map();
+
+function isValidEmail(value) {
+  return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim()) && value.trim().length <= 254;
+}
+
+function clientAddress(req) {
+  return req.socket.remoteAddress || 'unknown';
+}
+
+function isRateLimited(req) {
+  const now = Date.now();
+  const key = clientAddress(req);
+  const bucket = rateBuckets.get(key) || { startedAt: now, count: 0 };
+  if (now - bucket.startedAt >= RATE_WINDOW_MS) {
+    bucket.startedAt = now;
+    bucket.count = 0;
+  }
+  bucket.count += 1;
+  rateBuckets.set(key, bucket);
+  return bucket.count > RATE_LIMIT;
+}
 
 /**
  * Mengambil CSRF token dan Session Cookie dari server target
@@ -72,6 +97,7 @@ async function queryTargetOtp(email) {
       signal: controller.signal
     });
 
+    if (!res.ok) throw new Error(`Server target mengembalikan status ${res.status}`);
     const data = await res.json();
     return data;
   } finally {
@@ -92,10 +118,23 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer(async (req, res) => {
-  // CORS Headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  const isAllowedOrigin = !origin || 
+    origin.startsWith('http://localhost:') || 
+    origin.startsWith('http://127.0.0.1:') || 
+    origin.includes('rahmatpremium.cloud');
+
+  if (!isAllowedOrigin) {
+    res.writeHead(403, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ ok: false, error: 'Origin tidak diizinkan' }));
+    return;
+  }
+
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Requested-With');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'same-origin');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -108,6 +147,11 @@ const server = http.createServer(async (req, res) => {
 
   // Endpoint API OTP (Mendukung POST dan GET)
   if (pathname === '/api/otp' || pathname === '/api/get-otp') {
+    if (isRateLimited(req)) {
+      res.writeHead(429, { 'Content-Type': 'application/json; charset=utf-8', 'Retry-After': '60' });
+      res.end(JSON.stringify({ ok: false, error: 'Terlalu banyak permintaan. Coba lagi nanti.' }));
+      return;
+    }
     let email = null;
 
     if (req.method === 'GET') {
@@ -171,19 +215,25 @@ const server = http.createServer(async (req, res) => {
 });
 
 async function handleOtpRequest(email, res) {
-  if (!email || typeof email !== 'string' || !email.includes('@')) {
+  if (!isValidEmail(email)) {
     res.writeHead(400, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: false, error: 'Alamat email wajib diisi dengan format yang benar' }));
     return;
   }
 
   try {
-    const result = await queryTargetOtp(email);
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(result));
+    const result = await queryTargetOtp(email.trim());
+    const status = result && result.ok === false ? 502 : 200;
+    res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({
+      ok: Boolean(result && result.ok),
+      email: email.trim(),
+      otps: Array.isArray(result && result.otps) ? result.otps : [],
+      ...(result && result.ok === false ? { error: 'Belum ada OTP masuk atau layanan sedang sibuk.' } : {})
+    }));
   } catch (err) {
     console.error(`[Error] Gagal mengambil OTP untuk ${email}:`, err.message);
-    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.writeHead(502, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({
       ok: false,
       error: 'Layanan sedang sibuk, silakan coba beberapa saat lagi.'
@@ -192,7 +242,7 @@ async function handleOtpRequest(email, res) {
 }
 
 function startServer(port) {
-  server.listen(port, () => {
+  server.listen(port, HOST, () => {
     const url = `http://localhost:${port}`;
     console.log(`==========================================================`);
     console.log(`  🚀 OTP LEONARDO Berhasil Berjalan!`);
